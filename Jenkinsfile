@@ -1,23 +1,65 @@
 pipeline {
     agent any
-    triggers {
-        pollSCM('* * * * *')
+
+    environment {
+        SALEOR_HOSTNAME = 'your-saleor-hostname' // Set this environment variable or replace it directly
     }
+
     stages {
-        stage('vcs') {
+        stage('Install Dependencies') {
             steps {
-                git branch: 'main', url: 'https://github.com/akhilbabu459/storefront.git'
+                script {
+                    // Install npm globally
+                    sh 'npm i -g @saleor/cli@latest'
+                    // Install npm via apt if not already installed
+                    sh 'sudo apt update && sudo apt install -y npm'
+                    // Install pnpm via apt if not already installed
+                    sh 'sudo apt install -y pnpm'
+                }
             }
         }
-        stage('docker image build') {
+
+        stage('Clone Saleor Storefront') {
             steps {
-                sh 'docker image build -t akhil1919/saleor-front:DEV .'
+                script {
+                    // Clone Saleor storefront repository
+                    sh 'git clone https://github.com/saleor/storefront.git'
+                    // If necessary, use sudo for the git clone (though typically not needed)
+                    // sh 'sudo git clone https://github.com/saleor/storefront.git'
+                }
             }
         }
-        stage('push image to registry') {
+
+        stage('Set Up Environment') {
             steps {
-                sh 'docker image push akhil1919/saleor-front:DEV'
+                script {
+                    // Copy the example .env file to .env
+                    sh 'cp .env.example .env'
+                    // Optionally, use sudo (not recommended unless required)
+                    // sh 'sudo cp .env.example .env'
+                }
             }
+        }
+
+        stage('Install Dependencies using pnpm') {
+            steps {
+                script {
+                    // Install dependencies using pnpm
+                    sh 'pnpm install'
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Pipeline completed!'
+        }
+        success {
+            echo 'Pipeline executed successfully!'
+        }
+        failure {
+            echo 'Pipeline execution failed!'
         }
     }
 }
